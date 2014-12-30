@@ -1,0 +1,10 @@
+{
+  "name": "GManager2",
+  "version": "0.0.0",
+  "description": "GManager2",
+  "main": "app.js",
+  "author": {
+    "name": "VladHome",
+    "email": ""
+  }
+}
