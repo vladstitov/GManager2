@@ -1,8 +1,7 @@
-﻿var child = require('child_process');
+﻿/// <reference path="Scripts/typings/node/node.d.ts" />
+var child = require('child_process');
 
 var error: number = 0;
-
-
 var INSTALL_FOLDER: string = 'myapp';
 
 var GITURL: string = 'https://github.com/vladvaldtitov/node_CPanel.git';
@@ -50,9 +49,9 @@ var onHaveUpdate = function () {
 }
 
 var startClone = function () {
-    // gitCtr.runClone();
+     gitCtr.runClone();
     // gitCtr.runInstall();
-    gitCtr.runFetch();
+    //gitCtr.runFetch();
 }
 var onAppTaskComlete = function (mode: string, code: number) {
 
