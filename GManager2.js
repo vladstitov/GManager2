@@ -51,6 +51,7 @@ var onAppTaskComlete = function (mode, code) {
 };
 
 var onGitTaskComlete = function (mode, code) {
+    console.log('onGitTaskComlete ' + mode + '  ' + code);
     switch (mode) {
         case 'clone':
             gitCtr.runInstall();
@@ -59,9 +60,11 @@ var onGitTaskComlete = function (mode, code) {
             gitCtr.startTimer();
             break;
         case 'haveupdate':
+            console.log('onGitTaskComlete   have updates stopping conntroller ');
+            gitCtr.stopTimer();
+            console.log('onGitTaskComlete sending command to restart application ');
             break;
         case 'fetch':
-            console.log('onGitTaskComlete mode fetch code: ' + code);
             break;
     }
 };
@@ -178,20 +181,18 @@ var GitCommander = (function () {
     GitCommander.prototype.onFetchDone = function (code) {
         if (code == 0 && this.fetchData.indexOf('origin/master') != -1)
             this.onCommandDone(0, 'haveupdate');
+        else
+            this.onCommandDone(code, 'fetch');
     };
     GitCommander.prototype.runFetch = function () {
         var _this = this;
         this.fetchData = '';
         var mode = 'fetch';
         var cmd = 'git fetch ';
-        var f = function (err, stdout, stdin) {
-            return _this.onData(err, stdout, stdin);
-        };
-        if (this.isProd)
-            f = null;
-        else
-            console.log(' Running: ' + cmd);
-        this.pc = this.doCommand(cmd, f, function (code) {
+        console.log(' Running: ' + cmd);
+        this.pc = this.doCommand(cmd, function (err, stdout, stdin) {
+            return _this.onFetching(err, stdout, stdin);
+        }, function (code) {
             return _this.onFetchDone(code);
         });
     };
