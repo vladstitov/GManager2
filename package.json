@@ -2,7 +2,7 @@
   "name": "GManager2",
   "version": "0.0.0",
   "description": "GManager2",
-  "main": "app.js",
+  "main": "GManager2.js",
   "author": {
     "name": "VladHome",
     "email": ""
