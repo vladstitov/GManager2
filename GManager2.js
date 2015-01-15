@@ -58,7 +58,7 @@ var onGitTaskComlete = function (mode, code) {
         case 'install':
             gitCtr.startTimer();
             break;
-        case 'newdata':
+        case 'haveupdate':
             break;
         case 'fetch':
             console.log('onGitTaskComlete mode fetch code: ' + code);
@@ -169,8 +169,19 @@ var GitCommander = (function () {
         return 0;
     };
 
+    GitCommander.prototype.onFetching = function (err, stdout, stdin) {
+        if (err)
+            return;
+        this.fetchData += stdin;
+    };
+
+    GitCommander.prototype.onFetchDone = function (code) {
+        if (code == 0 && this.fetchData.indexOf('origin/master') != -1)
+            this.onCommandDone(0, 'haveupdate');
+    };
     GitCommander.prototype.runFetch = function () {
         var _this = this;
+        this.fetchData = '';
         var mode = 'fetch';
         var cmd = 'git fetch ';
         var f = function (err, stdout, stdin) {
@@ -181,7 +192,7 @@ var GitCommander = (function () {
         else
             console.log(' Running: ' + cmd);
         this.pc = this.doCommand(cmd, f, function (code) {
-            return _this.onCommandDone(code, mode);
+            return _this.onFetchDone(code);
         });
     };
 
