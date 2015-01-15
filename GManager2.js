@@ -189,7 +189,7 @@ var GitCommander = (function () {
         this.fetchData = '';
         var mode = 'fetch';
         var cmd = 'git fetch ';
-        console.log(' Running: ' + cmd);
+        console.log(' Running fetch ' + cmd);
         this.pc = this.doCommand(cmd, function (err, stdout, stdin) {
             return _this.onFetching(err, stdout, stdin);
         }, function (code) {
