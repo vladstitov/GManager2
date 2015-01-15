@@ -60,6 +60,9 @@ var onGitTaskComlete = function (mode, code) {
             break;
         case 'newdata':
             break;
+        case 'fetch':
+            console.log('onGitTaskComlete mode fetch code: ' + code);
+            break;
     }
 };
 
