@@ -1,0 +1,154 @@
+ub.com/vladvladtitov/GManager2.git
+Cloning into 'GManager2'...
+Username for 'https://github.com': 
+Password for 'https://github.com': 
+remote: Repository not found.
+fatal: Authentication failed for 'https://github.com/vladvladtitov/GManager2.git/'
+jibestream@jibestream-VirtualBox:~/Desktop/test$ git clone https://github.com/vladvladtitov/GManager2.git
+Cloning into 'GManager2'...
+Username for 'https://github.com': vlad.vlad.titov@gmail.com
+Password for 'https://vlad.vlad.titov@gmail.com@github.com': 
+remote: Repository not found.
+fatal: repository 'https://github.com/vladvladtitov/GManager2.git/' not found
+jibestream@jibestream-VirtualBox:~/Desktop/test$ git clone https://github.com/vladvaldtitov/GManager2.git
+Cloning into 'GManager2'...
+remote: Counting objects: 20, done.
+remote: Compressing objects: 100% (3/3), done.
+remote: Total 20 (delta 0), reused 0 (delta 0)
+Unpacking objects: 100% (20/20), done.
+Checking connectivity... done.
+jibestream@jibestream-VirtualBox:~/Desktop/test$ cd Gmanager
+bash: cd: Gmanager: No such file or directory
+jibestream@jibestream-VirtualBox:~/Desktop/test$ cd Gmanager2
+bash: cd: Gmanager2: No such file or directory
+jibestream@jibestream-VirtualBox:~/Desktop/test$ ls
+GManager2
+jibestream@jibestream-VirtualBox:~/Desktop/test$ cd GManager2
+jibestream@jibestream-VirtualBox:~/Desktop/test/GManager2$ ls
+app.js             GManager2.sln  GManager2.v12.suo  README.md
+GManager2.njsproj  GManager2.ts   package.json
+jibestream@jibestream-VirtualBox:~/Desktop/test/GManager2$ git fetch
+remote: Counting objects: 6, done.
+remote: Compressing objects: 100% (6/6), done.
+remote: Total 6 (delta 3), reused 3 (delta 0)
+Unpacking objects: 100% (6/6), done.
+From https://github.com/vladvaldtitov/GManager2
+   58386f6..2b18235  master     -> origin/master
+jibestream@jibestream-VirtualBox:~/Desktop/test/GManager2$ git pull
+Updating 58386f6..2b18235
+Fast-forward
+ GManager2.js      | 308 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ GManager2.js.map  |   1 +
+ GManager2.njsproj |  10 +-
+ app.js            |   6 --
+ package.json      |   2 +-
+ 5 files changed, 317 insertions(+), 10 deletions(-)
+ create mode 100644 GManager2.js
+ create mode 100644 GManager2.js.map
+ delete mode 100644 app.js
+jibestream@jibestream-VirtualBox:~/Desktop/test/GManager2$ ls
+GManager2.js      GManager2.njsproj  GManager2.ts       package.json
+GManager2.js.map  GManager2.sln      GManager2.v12.suo  README.md
+jibestream@jibestream-VirtualBox:~/Desktop/test/GManager2$ node GManager2.js
+ Running: git clone https://github.com/vladvaldtitov/node_CPanel.git myapp --depth 1
+err:  null
+out : 
+stdin:  Cloning into 'myapp'...
+
+Mode clone finished with code: 0
+ Running: cd myapp &&  npm install
+err:  null
+out : 
+> sqlite3@3.0.4 install /home/jibestream/Desktop/test/GManager2/myapp/node_modules/sqlite3
+> node-pre-gyp install --fallback-to-build
+
+[sqlite3] Success: "/home/jibestream/Desktop/test/GManager2/myapp/node_modules/sqlite3/lib/binding/node-v11-linux-ia32/node_sqlite3.node" is installed via remote
+sqlite3@3.0.4 node_modules/sqlite3
++-- nan@1.4.3
+
+stdin:  npm WARN package.json node_CPanel@0.0.0 No repository field.
+
+Mode install finished with code: 0
+Starting timer 20000
+ Running: git fetch 
+err:  null
+out : 
+stdin:  
+Mode fetch finished with code: 0
+ Running: git fetch 
+err:  null
+out : 
+stdin:  
+Mode fetch finished with code: 0
+ Running: git fetch 
+err:  null
+out : 
+stdin:  
+Mode fetch finished with code: 0
+ Running: git fetch 
+err:  null
+out : 
+stdin:  
+Mode fetch finished with code: 0
+ Running: git fetch 
+ Running: git fetch 
+err:  { [Error: Command failed: fatal: unable to access 'https://github.com/vladvaldtitov/GManager2.git/': Could not resolve host: github.com
+] killed: false, code: 128, signal: null }
+out : 
+stdin:  fatal: unable to access 'https://github.com/vladvaldtitov/GManager2.git/': Could not resolve host: github.com
+
+Mode fetch finished with code: 128
+err:  { [Error: Command failed: fatal: unable to access 'https://github.com/vladvaldtitov/GManager2.git/': Could not resolve host: github.com
+] killed: false, code: 128, signal: null }
+out : 
+stdin:  fatal: unable to access 'https://github.com/vladvaldtitov/GManager2.git/': Could not resolve host: github.com
+
+Mode fetch finished with code: 128
+ Running: git fetch 
+err:  null
+out : 
+stdin:  
+Mode fetch finished with code: 0
+ Running: git fetch 
+err:  null
+out : 
+stdin:  
+Mode fetch finished with code: 0
+ Running: git fetch 
+err:  null
+out : 
+stdin:  
+Mode fetch finished with code: 0
+ Running: git fetch 
+err:  null
+out : 
+stdin:  
+Mode fetch finished with code: 0
+ Running: git fetch 
+err:  null
+out : 
+stdin:  
+Mode fetch finished with code: 0
+ Running: git fetch 
+err:  null
+out : 
+stdin:  
+Mode fetch finished with code: 0
+ Running: git fetch 
+err:  null
+out : 
+stdin:  
+Mode fetch finished with code: 0
+ Running: git fetch 
+err:  null
+out : 
+stdin:  From https://github.com/vladvaldtitov/GManager2
+   2b18235..244b6a2  master     -> origin/master
+
+Mode fetch finished with code: 0
+ Running: git fetch 
+err:  null
+out : 
+stdin:  
+Mode fetch finished with code: 0
+ Running: git fetch 

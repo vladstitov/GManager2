@@ -23,24 +23,18 @@ var settings = {
 }
 
 var gitCtr: GitCommander
-var server: AppCommander;
+var myapp: AppCommander;
 
 var onGitReady = function () {
-    console.log('onGitReady');
-    if (!server) {
-        server = new AppCommander(child, settings);
-        server.onServerStoped = onServerStoped;
-    }
+    console.log('onGitReady');   
+    
     gitCtr.startTimer();
-    server.startApplication();
+    myapp.startApplication();
 
 }
-var onServerStoped = function () {
+var onAppStoped = function () {
     console.log('server stoped ready for update');
     gitCtr.runPull();
-}
-var stopServer = function () {
-    server.stopApplication();
 }
 
 var onHaveUpdate = function () {
@@ -59,6 +53,7 @@ var onAppTaskComlete = function (mode: string, code: number) {
 
 
 var onGitTaskComlete = function (mode: string, code: number) {
+    console.log('onGitTaskComlete '+mode+'  ' + code);
     switch (mode) {
         case 'clone':
             gitCtr.runInstall();
@@ -66,8 +61,17 @@ var onGitTaskComlete = function (mode: string, code: number) {
         case 'install':
             gitCtr.startTimer();
             break;
-        case 'newdata':
+        case 'haveupdate':
+            console.log('onGitTaskComlete   have updates stopping conntroller ');
+            gitCtr.stopTimer();
+            console.log('onGitTaskComlete sending command to restart application ');
             break;
+        case 'fetch':
+            
+            break;
+        case 'pull':
+            myapp.startApplication();
+            break
 
     }
 
@@ -76,11 +80,11 @@ var onGitTaskComlete = function (mode: string, code: number) {
 
 function initMe(child) {
     error = 0;
-    gitCtr = new GitCommander(child, settings);
-    // gitCtr.onReady = onGitReady;
-    // gitCtr.onNewData = onHaveUpdate;
-
+    gitCtr = new GitCommander(child, settings);     
     gitCtr.onComplete = onGitTaskComlete;
+
+    myapp = new AppCommander(child, settings);
+    myapp.onAppStoped = onAppStoped;
     setTimeout(startClone, 1000);
     var exec = child.exec;
 
@@ -158,6 +162,7 @@ class GitCommander {
     constructor(private child, settings: any) {
         this.exec = child.exec;
         for (var str in settings) this[str] = settings[str];
+        this.PREF = 'cd ' + this.INSTALL_FOLDER + ' && ';
     }
 
     private onData = function (err, stdout, stdin) {
@@ -188,18 +193,29 @@ class GitCommander {
         return 0;
     }
 
+    private fetchData: string;
+
+    private onFetching(err, stdout, stdin): void {
+        if (err) return;
+        this.fetchData += stdin;
+    }
+
+    private onFetchDone(code): void {
+        if (code == 0 && this.fetchData.indexOf('origin/master') != -1) this.onCommandDone(0, 'haveupdate');
+        else this.onCommandDone(code, 'fetch');
+
+    }
     runFetch(): void {
+        this.fetchData = '';
         var mode: string = 'fetch';
-        var cmd: string = 'git fetch ';
-        var f = (err, stdout, stdin) => this.onData(err, stdout, stdin);
-        if (this.isProd) f = null
-        else console.log(' Running: ' + cmd);
-        this.pc = this.doCommand(cmd, f, (code) => this.onCommandDone(code, mode));
+        var cmd: string = this.PREF+'git fetch ';
+        console.log(' Running fetch ' + cmd);
+        this.pc = this.doCommand(cmd, (err, stdout, stdin)=>this.onFetching(err, stdout, stdin), (code) => this.onFetchDone(code));
     }
 
     runInstall(): void {
         var mode: string = 'install';
-        var cmd: string = 'cd ' + this.INSTALL_FOLDER + ' && ' + ' npm install';
+        var cmd: string = this.PREF+'npm install';
         var f = (err, stdout, stdin) => this.onData(err, stdout, stdin);
         if (this.isProd) f = null
          else console.log(' Running: ' + cmd);
@@ -208,10 +224,10 @@ class GitCommander {
     }
 
     runPull(): void {
-        var mode: string = 'pull';
+        var mode: string ='pull';
         var f = (err, stdout, stdin) => this.onData(err, stdout, stdin);
         if (this.isProd) f = null
-        var cmd: string = 'cd ' + this.INSTALL_FOLDER + ' && ' + ' git pull';
+        var cmd: string = this.PREF+ 'git pull';
         this.pc = this.doCommand(cmd, f, (code) => this.onCommandDone(code, mode));
     }
 
@@ -243,7 +259,7 @@ class AppCommander {
     private exec
     private pc: any;
     private PREF: string;
-    private APP_FOLDER: string;  
+    private INSTALL_FOLDER: string;  
 
     private isHello: boolean
     private processData(data: string): void {
@@ -253,7 +269,7 @@ class AppCommander {
                 this.pc.stdin.write("exitprocess\n");
                 this.pc.kill();
                 this.pc = null;
-                if (this.onServerStoped) this.onServerStoped();
+                if (this.onAppStoped) this.onAppStoped();
                 break;
             case 'FROM_APPLICATION_HELLO':
                 this.isHello = true;
@@ -281,16 +297,18 @@ class AppCommander {
     constructor(child, private settings: any) {
         this.exec = child.exec;
         this.PREF = settings.PREF;
+        this.INSTALL_FOLDER = settings.INSTALL_FOLDER;
+        this.PREF = 'cd ' + this.INSTALL_FOLDER + ' && ';
     }
 
+   
+    onAppStoped: Function;
 
-    onServerStoped: Function;
     startApplication() {
         this.pc = this.exec(this.PREF + 'npm start', function (error, stdout, stderr) {
             console.log('on process end stdout: ' + stdout);
             console.log('on process end stderr: ' + stderr);
             console.log('on process end error: ' + error);
-
         });//, null, (err, stdout, stdin) => this.onData(err, stdout, stdin));
 
         this.pc.on('close', (code) => this.onDataClose(code));
@@ -302,6 +320,10 @@ class AppCommander {
     stopApplication() {
         console.log('sending stop server ');
         this.pc.stdin.write("stopapplication\n");
+        this.pc.kill();
+        setTimeout(() => {
+            if (this.onAppStoped) this.onAppStoped();
+        }, 1000);
     }
 
 }

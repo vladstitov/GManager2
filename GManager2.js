@@ -18,23 +18,17 @@ var settings = {
 };
 
 var gitCtr;
-var server;
+var myapp;
 
 var onGitReady = function () {
     console.log('onGitReady');
-    if (!server) {
-        server = new AppCommander(child, settings);
-        server.onServerStoped = onServerStoped;
-    }
+
     gitCtr.startTimer();
-    server.startApplication();
+    myapp.startApplication();
 };
-var onServerStoped = function () {
+var onAppStoped = function () {
     console.log('server stoped ready for update');
     gitCtr.runPull();
-};
-var stopServer = function () {
-    server.stopApplication();
 };
 
 var onHaveUpdate = function () {
@@ -66,16 +60,19 @@ var onGitTaskComlete = function (mode, code) {
             break;
         case 'fetch':
             break;
+        case 'pull':
+            myapp.startApplication();
+            break;
     }
 };
 
 function initMe(child) {
     error = 0;
     gitCtr = new GitCommander(child, settings);
-
-    // gitCtr.onReady = onGitReady;
-    // gitCtr.onNewData = onHaveUpdate;
     gitCtr.onComplete = onGitTaskComlete;
+
+    myapp = new AppCommander(child, settings);
+    myapp.onAppStoped = onAppStoped;
     setTimeout(startClone, 1000);
     var exec = child.exec;
 
@@ -119,6 +116,7 @@ var GitCommander = (function () {
         this.exec = child.exec;
         for (var str in settings)
             this[str] = settings[str];
+        this.PREF = 'cd ' + this.INSTALL_FOLDER + ' && ';
     }
     GitCommander.prototype.doCommand = function (cmd, callBack, onClose) {
         var pc = this.exec(cmd, null, callBack);
@@ -188,7 +186,7 @@ var GitCommander = (function () {
         var _this = this;
         this.fetchData = '';
         var mode = 'fetch';
-        var cmd = 'git fetch ';
+        var cmd = this.PREF + 'git fetch ';
         console.log(' Running fetch ' + cmd);
         this.pc = this.doCommand(cmd, function (err, stdout, stdin) {
             return _this.onFetching(err, stdout, stdin);
@@ -200,7 +198,7 @@ var GitCommander = (function () {
     GitCommander.prototype.runInstall = function () {
         var _this = this;
         var mode = 'install';
-        var cmd = 'cd ' + this.INSTALL_FOLDER + ' && ' + ' npm install';
+        var cmd = this.PREF + 'npm install';
         var f = function (err, stdout, stdin) {
             return _this.onData(err, stdout, stdin);
         };
@@ -222,7 +220,7 @@ var GitCommander = (function () {
         };
         if (this.isProd)
             f = null;
-        var cmd = 'cd ' + this.INSTALL_FOLDER + ' && ' + ' git pull';
+        var cmd = this.PREF + 'git pull';
         this.pc = this.doCommand(cmd, f, function (code) {
             return _this.onCommandDone(code, mode);
         });
@@ -257,6 +255,8 @@ var AppCommander = (function () {
         this.settings = settings;
         this.exec = child.exec;
         this.PREF = settings.PREF;
+        this.INSTALL_FOLDER = settings.INSTALL_FOLDER;
+        this.PREF = 'cd ' + this.INSTALL_FOLDER + ' && ';
     }
     AppCommander.prototype.processData = function (data) {
         data = data.trim();
@@ -265,8 +265,8 @@ var AppCommander = (function () {
                 this.pc.stdin.write("exitprocess\n");
                 this.pc.kill();
                 this.pc = null;
-                if (this.onServerStoped)
-                    this.onServerStoped();
+                if (this.onAppStoped)
+                    this.onAppStoped();
                 break;
             case 'FROM_APPLICATION_HELLO':
                 this.isHello = true;
@@ -314,10 +314,17 @@ var AppCommander = (function () {
     };
 
     AppCommander.prototype.stopApplication = function () {
+        var _this = this;
         console.log('sending stop server ');
         this.pc.stdin.write("stopapplication\n");
+        this.pc.kill();
+        setTimeout(function () {
+            if (_this.onAppStoped)
+                _this.onAppStoped();
+        }, 1000);
     };
     return AppCommander;
 })();
 
 initMe(child);
+//# sourceMappingURL=GManager2.js.map
