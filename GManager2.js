@@ -14,6 +14,7 @@ var settings = {
     GITURL: GITURL,
     APP_FOLDER: APP_FOLDER,
     CHECK_TIMER: 20000,
+    APP_NAME: 'server.js',
     isProd: 0
 };
 
@@ -26,42 +27,60 @@ var onGitReady = function () {
     gitCtr.startTimer();
     myapp.startApplication();
 };
-var onAppStoped = function () {
-    console.log('server stoped ready for update');
-    gitCtr.runPull();
-};
 
-var onHaveUpdate = function () {
-    gitCtr.stopTimer();
-    stopServer();
-};
+var mytimer;
 
 var startClone = function () {
     gitCtr.runClone();
     // gitCtr.runInstall();
     //gitCtr.runFetch();
 };
+
 var onAppTaskComlete = function (mode, code) {
+    switch (mode) {
+        case 'stoped':
+            console.log('application  stoped update start in 10 second otherwise type =>no ');
+            mytimer = setTimeout(function () {
+                gitCtr.runPull();
+            }, 15000);
+            break;
+    }
 };
 
 var onGitTaskComlete = function (mode, code) {
     console.log('onGitTaskComlete ' + mode + '  ' + code);
     switch (mode) {
         case 'clone':
-            gitCtr.runInstall();
+            console.log('will pull in 10 second otherwise type =>no ');
+            mytimer = setTimeout(function () {
+                gitCtr.runPull();
+            }, 15000);
+
             break;
         case 'install':
-            gitCtr.startTimer();
+            console.log('will start application in 10 second otherwise type =>no ');
+            mytimer = setTimeout(function () {
+                myapp.startApplication();
+                gitCtr.startTimer();
+            }, 15000);
+
             break;
         case 'haveupdate':
-            console.log('onGitTaskComlete   have updates stopping conntroller ');
+            console.log('have updates stopping git conntroller ');
             gitCtr.stopTimer();
-            console.log('onGitTaskComlete sending command to restart application ');
+            console.log('will stop application in 10 second otherwise type =>no ');
+            mytimer = setTimeout(function () {
+                myapp.stopApplication();
+            }, 15000);
             break;
         case 'fetch':
             break;
         case 'pull':
-            myapp.startApplication();
+            console.log('will install in 10 second otherwise type =>no ');
+            mytimer = setTimeout(function () {
+                gitCtr.runInstall();
+            }, 15000);
+
             break;
     }
 };
@@ -72,10 +91,10 @@ function initMe(child) {
     gitCtr.onComplete = onGitTaskComlete;
 
     myapp = new AppCommander(child, settings);
-    myapp.onAppStoped = onAppStoped;
+    myapp.onAppTaskComplete = onAppTaskComlete;
     setTimeout(startClone, 1000);
-    var exec = child.exec;
 
+    // var exec = child.exec;
     process.stdin.setEncoding('utf8');
     process.on('uncaughtException', function (err) {
         error = err.stack;
@@ -92,11 +111,27 @@ function initMe(child) {
         var chunk = process.stdin.read();
         if (!chunk)
             return;
-        if (chunk.trim() == 'stop') {
-            stopServer();
-            return;
+        switch (chunk.trim()) {
+            case 'stop':
+                myapp.stopApplication();
+                break;
+            case 'start':
+                myapp.startApplication();
+                break;
+            case 'no':
+                clearTimeout(mytimer);
+                console.log('next operation interrupted to manual control');
+                break;
+            case 'killapp':
+                myapp.killApplication();
+                break;
+            case 'apphi':
+                myapp.sendToApplication('hello');
+                break;
+            case 'help':
+                console.log('Known commands: stop, start, no, killapp, apphi help');
+                break;
         }
-        // console.log(chunk);
     });
 }
 
@@ -252,23 +287,27 @@ var GitCommander = (function () {
 
 var AppCommander = (function () {
     function AppCommander(child, settings) {
+        this.child = child;
         this.settings = settings;
-        this.exec = child.exec;
+        this.path = require('path');
+        // this.exec = child.exec;
+        // this.exec = child.spawn;
         this.PREF = settings.PREF;
         this.INSTALL_FOLDER = settings.INSTALL_FOLDER;
         this.PREF = 'cd ' + this.INSTALL_FOLDER + ' && ';
+        this.FOLDER = this.path.join(process.cwd(), settings.INSTALL_FOLDER);
+
+        //console.log(this.FOLDER);
+        this.APP_NAME = settings.APP_NAME;
     }
     AppCommander.prototype.processData = function (data) {
         data = data.trim();
         switch (data) {
             case 'FROM_APP_STOPPED':
-                this.pc.stdin.write("exitprocess\n");
-                this.pc.kill();
-                this.pc = null;
-                if (this.onAppStoped)
-                    this.onAppStoped();
+                this.onAppTaskComplete('stoped', 0);
                 break;
             case 'FROM_APPLICATION_HELLO':
+                this.onAppTaskComplete('started', 0);
                 this.isHello = true;
                 break;
         }
@@ -276,24 +315,67 @@ var AppCommander = (function () {
 
     AppCommander.prototype.onDataFromServer = function (data) {
         console.log('onDataFromServer: ' + data);
-        if (data && data.indexOf('FROM') == 0)
-            this.processData(data);
+        ///if (data && data.indexOf('FROM') == 0) this.processData(data);
     };
 
     AppCommander.prototype.onDataClose = function (data) {
-        console.log('onDataClose: ' + data);
+        console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!       onDataClose: ' + data);
+        this.pc = null;
     };
     AppCommander.prototype.onDataError = function (data) {
         console.log('onDataError: ' + data);
     };
 
     AppCommander.prototype.sendTest = function () {
-        this.pc.stdin.write("hello\n");
+        this.sendToApplication('hello');
+    };
+
+    AppCommander.prototype.onAppTaskComplete = function (mode, code) {
     };
 
     AppCommander.prototype.startApplication = function () {
+        if (!this.APP_NAME)
+            this.startApplicationSpawn();
+        else
+            this.startApplicationExec();
+    };
+
+    /*
+    private onData(data) {
+    console.log('on Data from application ', data);
+    }
+    */
+    AppCommander.prototype.onDataFromApp = function (data) {
+        console.log('##### onDataFromApp: ' + data);
+    };
+
+    AppCommander.prototype.onErrorFromApp = function (data) {
+        console.log('##### onErrorFromApp: ' + data);
+    };
+    AppCommander.prototype.startApplicationSpawn = function () {
         var _this = this;
-        this.pc = this.exec(this.PREF + 'npm start', function (error, stdout, stderr) {
+        this.pc = this.child.spawn('node', [this.APP_NAME], { cwd: this.FOLDER });
+        this.pc.on('close', function (code) {
+            return _this.onDataClose(code);
+        });
+
+        //this.pc.on('data', (data) => this.onData(data));
+        this.pc.stdout.on('data', function (data) {
+            return _this.onDataFromApp(data);
+        });
+        this.pc.stderr.on('data', function (data) {
+            return _this.onErrorFromApp(data);
+        });
+        setTimeout(function () {
+            return _this.sendTest();
+        }, 1000);
+    };
+
+    AppCommander.prototype.startApplicationExec = function () {
+        var _this = this;
+        console.log('startApplicationExec ' + this.FOLDER);
+
+        this.pc = this.child.exec('npm start', { cwd: this.FOLDER }, function (error, stdout, stderr) {
             console.log('on process end stdout: ' + stdout);
             console.log('on process end stderr: ' + stderr);
             console.log('on process end error: ' + error);
@@ -303,25 +385,31 @@ var AppCommander = (function () {
             return _this.onDataClose(code);
         });
         this.pc.stdout.on('data', function (data) {
-            return _this.onDataFromServer(data);
+            return _this.onDataFromApp(data);
         });
         this.pc.stderr.on('data', function (data) {
-            return _this.onDataError(data);
+            return _this.onErrorFromApp(data);
         });
         setTimeout(function () {
             return _this.sendTest();
         }, 1000);
     };
 
+    AppCommander.prototype.onStopTimer = function () {
+    };
+    AppCommander.prototype.sendToApplication = function (msg) {
+        if (this.pc && this.pc.stdin)
+            this.pc.stdin.write(msg + "\n");
+        else
+            console.log(this.pc);
+    };
+    AppCommander.prototype.killApplication = function () {
+        if (this.pc)
+            this.pc.kill();
+    };
     AppCommander.prototype.stopApplication = function () {
-        var _this = this;
-        console.log('sending stop server ');
+        console.log('sending stop app ');
         this.pc.stdin.write("stopapplication\n");
-        this.pc.kill();
-        setTimeout(function () {
-            if (_this.onAppStoped)
-                _this.onAppStoped();
-        }, 1000);
     };
     return AppCommander;
 })();

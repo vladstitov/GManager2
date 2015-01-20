@@ -12,7 +12,8 @@ var settings = {
     INSTALL_FOLDER: INSTALL_FOLDER,
     GITURL: GITURL,
     APP_FOLDER: APP_FOLDER,
-    CHECK_TIMER: 20000,
+    CHECK_TIMER: 20000,    
+    APP_NAME:'server.js',
     isProd: 0
     // server: 'app.js',
     // PREF: 'cd ' + INSTALL_FOLDER + ' && ',
@@ -30,47 +31,65 @@ var onGitReady = function () {
     
     gitCtr.startTimer();
     myapp.startApplication();
-
-}
-var onAppStoped = function () {
-    console.log('server stoped ready for update');
-    gitCtr.runPull();
 }
 
-var onHaveUpdate = function () {
-    gitCtr.stopTimer();
-    stopServer();
-}
+var mytimer;
 
 var startClone = function () {
      gitCtr.runClone();
     // gitCtr.runInstall();
     //gitCtr.runFetch();
 }
-var onAppTaskComlete = function (mode: string, code: number) {
 
+var onAppTaskComlete = function (mode: string, code: number) {
+    switch (mode) {
+        case 'stoped':
+            console.log('application  stoped update start in 10 second otherwise type =>no ');
+            mytimer = setTimeout(() => {
+                gitCtr.runPull();
+
+            }, 15000);
+            break;
+    }
 }
 
 
 var onGitTaskComlete = function (mode: string, code: number) {
     console.log('onGitTaskComlete '+mode+'  ' + code);
     switch (mode) {
-        case 'clone':
-            gitCtr.runInstall();
+        
+        case 'clone': 
+            console.log('will pull in 10 second otherwise type =>no ');
+            mytimer = setTimeout(() => {
+                gitCtr.runPull();
+            }, 15000);           
+           
             break;
         case 'install':
-            gitCtr.startTimer();
+            console.log('will start application in 10 second otherwise type =>no ');
+            mytimer = setTimeout(() => {
+                myapp.startApplication();
+                gitCtr.startTimer();
+            }, 15000);     
+           
             break;
         case 'haveupdate':
-            console.log('onGitTaskComlete   have updates stopping conntroller ');
+            console.log('have updates stopping git conntroller ');
             gitCtr.stopTimer();
-            console.log('onGitTaskComlete sending command to restart application ');
+            console.log('will stop application in 10 second otherwise type =>no ');
+            mytimer = setTimeout(() => {
+                myapp.stopApplication();
+            }, 15000);            
             break;
         case 'fetch':
             
             break;
-        case 'pull':
-            myapp.startApplication();
+        case 'pull':           
+            console.log('will install in 10 second otherwise type =>no ');
+            mytimer = setTimeout(() => {
+                gitCtr.runInstall();
+            }, 15000);
+           
             break
 
     }
@@ -84,9 +103,9 @@ function initMe(child) {
     gitCtr.onComplete = onGitTaskComlete;
 
     myapp = new AppCommander(child, settings);
-    myapp.onAppStoped = onAppStoped;
+    myapp.onAppTaskComplete = onAppTaskComlete;
     setTimeout(startClone, 1000);
-    var exec = child.exec;
+   // var exec = child.exec;
 
     process.stdin.setEncoding('utf8');
     process.on('uncaughtException', function (err) {
@@ -104,12 +123,28 @@ function initMe(child) {
     process.stdin.on('readable', function () {
         var chunk = process.stdin.read();
         if (!chunk) return;
-        if (chunk.trim() == 'stop') {
-            stopServer();
-            return;
-        }
-
-        // console.log(chunk);  
+       switch(chunk.trim()){
+           case 'stop':
+               myapp.stopApplication();
+               break;
+           case 'start':
+               myapp.startApplication();
+               break;
+           case 'no':
+               clearTimeout(mytimer);
+               console.log('next operation interrupted to manual control');
+               break;
+           case 'killapp':
+               myapp.killApplication();
+               break;
+           case 'apphi':
+               myapp.sendToApplication('hello');
+               break;
+           case 'help':
+               console.log('Known commands: stop, start, no, killapp, apphi help');
+               break;
+        
+        }      
     });
 
 
@@ -256,22 +291,23 @@ class GitCommander {
 }
 
 class AppCommander {
-    private exec
+   // private exec    
     private pc: any;
     private PREF: string;
     private INSTALL_FOLDER: string;  
+    private path = require('path');
+    private FOLDER: string;
+    private APP_NAME: string;
 
     private isHello: boolean
     private processData(data: string): void {
         data = data.trim();
         switch (data) {
-            case 'FROM_APP_STOPPED':
-                this.pc.stdin.write("exitprocess\n");
-                this.pc.kill();
-                this.pc = null;
-                if (this.onAppStoped) this.onAppStoped();
+            case 'FROM_APP_STOPPED':               
+                this.onAppTaskComplete('stoped', 0);
                 break;
             case 'FROM_APPLICATION_HELLO':
+                this.onAppTaskComplete('started', 0);
                 this.isHello = true;
                 break;
 
@@ -281,49 +317,95 @@ class AppCommander {
 
     private onDataFromServer(data: string): void {
         console.log('onDataFromServer: ' + data);
-        if (data && data.indexOf('FROM') == 0) this.processData(data);
+        ///if (data && data.indexOf('FROM') == 0) this.processData(data);
     }
 
     private onDataClose(data: string): void {
-        console.log('onDataClose: ' + data);
+        console.log('!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!       onDataClose: ' + data);
+        this.pc = null;
     }
     private onDataError(data: string): void {
         console.log('onDataError: ' + data);
     }
 
     private sendTest(): void {
-        this.pc.stdin.write("hello\n");
+        this.sendToApplication('hello');
     }
-    constructor(child, private settings: any) {
-        this.exec = child.exec;
+    constructor(private child, private settings: any) {
+        // this.exec = child.exec;
+       // this.exec = child.spawn;
+       
         this.PREF = settings.PREF;
         this.INSTALL_FOLDER = settings.INSTALL_FOLDER;
-        this.PREF = 'cd ' + this.INSTALL_FOLDER + ' && ';
+        this.PREF = 'cd ' + this.INSTALL_FOLDER + ' && ';  
+        this.FOLDER = this.path.join(process.cwd(), settings.INSTALL_FOLDER);
+        //console.log(this.FOLDER);
+        this.APP_NAME = settings.APP_NAME;
+
     }
 
-   
-    onAppStoped: Function;
+    onAppTaskComplete(mode:string,code: number): void {
+
+    }
 
     startApplication() {
-        this.pc = this.exec(this.PREF + 'npm start', function (error, stdout, stderr) {
+        if (!this.APP_NAME) this.startApplicationSpawn();
+        else this.startApplicationExec();
+    }
+
+       
+    /*
+    private onData(data) {
+        console.log('on Data from application ', data);
+    }
+    */
+    private onDataFromApp(data):void {
+        console.log('##### onDataFromApp: ' + data);
+    }
+
+    private onErrorFromApp(data): void {
+        console.log('##### onErrorFromApp: ' + data);
+
+    }
+    private startApplicationSpawn() {
+        this.pc = this.child.spawn('node', [this.APP_NAME], { cwd:this.FOLDER });        
+        this.pc.on('close', (code) => this.onDataClose(code));
+        //this.pc.on('data', (data) => this.onData(data));
+        this.pc.stdout.on('data', (data) => this.onDataFromApp(data));
+        this.pc.stderr.on('data', (data) => this.onErrorFromApp(data));       
+        setTimeout(() => this.sendTest(), 1000);
+    }
+
+    private startApplicationExec() {
+        console.log('startApplicationExec ' + this.FOLDER);
+
+        this.pc = this.child.exec('npm start', {cwd:this.FOLDER}, function (error, stdout, stderr) {
             console.log('on process end stdout: ' + stdout);
             console.log('on process end stderr: ' + stderr);
             console.log('on process end error: ' + error);
         });//, null, (err, stdout, stdin) => this.onData(err, stdout, stdin));
 
         this.pc.on('close', (code) => this.onDataClose(code));
-        this.pc.stdout.on('data', (data) => this.onDataFromServer(data));
-        this.pc.stderr.on('data', (data) => this.onDataError(data));
+        this.pc.stdout.on('data', (data) => this.onDataFromApp(data));
+        this.pc.stderr.on('data', (data) => this.onErrorFromApp(data));
         setTimeout(() => this.sendTest(), 1000);
     }
+    private stoptimer: number
 
+    private onStopTimer(): void {
+       
+    }
+    sendToApplication(msg): void {
+        if (this.pc && this.pc.stdin) this.pc.stdin.write(msg + "\n");
+        else console.log(this.pc);
+
+    }
+    killApplication(): void {        
+        if(this.pc)this.pc.kill();       
+    }
     stopApplication() {
-        console.log('sending stop server ');
-        this.pc.stdin.write("stopapplication\n");
-        this.pc.kill();
-        setTimeout(() => {
-            if (this.onAppStoped) this.onAppStoped();
-        }, 1000);
+        console.log('sending stop app ');
+        this.pc.stdin.write("stopapplication\n");      
     }
 
 }
